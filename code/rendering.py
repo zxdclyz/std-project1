@@ -19,9 +19,9 @@ def rendering(dir):
     # 读取训练集图片 
     train_images = []
     for i in range(len(train_data)):
-        train_img = cv2.imread(os.path.join(dir, train_data[i][0] + '.bmp'))
+        train_img = cv2.imread(os.path.join(dir,'train', train_data[i][0] + '.bmp'), 0)
         train_images.append(train_img)
-    
+
     z = np.zeros([168,168])
     imgs=np.zeros([10, 168, 168]).astype(np.uint8)
     return z, imgs
