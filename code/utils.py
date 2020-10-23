@@ -14,7 +14,7 @@ def cart2sph(x,y,z):
     azimuth = np.arctan2(x,z)*r2d
     elevation = np.arctan2(y,np.sqrt(z**2 + x**2))*r2d
     r = np.sqrt(z**2 + x**2 + y**2)
-    return azimuth, elevation, r
+    return [azimuth, elevation, r]
 
 def sph2cart(azimuth,elevation,r):
     '''
@@ -30,4 +30,4 @@ def sph2cart(azimuth,elevation,r):
     z = r * np.cos(elevation*d2r) * np.cos(azimuth*d2r)
     x = r * np.cos(elevation*d2r) * np.sin(azimuth*d2r)
     y = r * np.sin(elevation*d2r)
-    return x, y, z
+    return [x, y, z]
