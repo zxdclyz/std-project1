@@ -45,11 +45,16 @@ def rendering(dir):
     for i in range(0,len(train_images)):
         train_data[i,:] = train_images[i]
 
+    kd = np.mean(train_data,axis=0,keepdims=True)
+
     # 使用最小二乘法计算B
-    b,_,_,_ = lstsq(train_s,train_data)
+    B_star,_,_,_ = lstsq(train_s,train_data)
+
+    t = B_star/kd
+    [zx_star,zy_star,_] = -t/t[2,:]
 
     # 进行测试
-    img_r = test_s @ b
+    img_r = test_s @ B_star
 
     # 生成测试图像
     imgs = []
