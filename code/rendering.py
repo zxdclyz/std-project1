@@ -20,10 +20,11 @@ def dct(z_x, z_y, N):
                                    * np.pi / (2 * N)) * np.pi / N
     dD[0, :] = np.sqrt(1 / N)
     dD = dD * t.T
+    dD_i = np.linalg.pinv(dD)
 
-    C_1 = D @ z_x.reshape([N, N]) @ dD.T
-    C_2 = dD @ z_y.reshape([N, N]) @ D
-    return [C_1, C_2, D, dD]
+    C_1 = D @ z_x.reshape([N, N]) @ dD_i.T
+    C_2 = dD_i @ z_y.reshape([N, N]) @ D.T
+    return [C_1, C_2, D, dD, dD_i]
 
 
 # def dist(C, C_1, C_2, P_x, P_y):
@@ -79,19 +80,28 @@ def rendering(dir):
     t = B_star/kd
     [zx_star, zy_star, _] = -t/t[2, :]
 
-    [C_1, C_2, D, dD] = dct(zx_star, zy_star, 168)
+    [C_1, C_2, D, dD, dD_i] = dct(zx_star, zy_star, 168)
 
-    D_sum = np.sum(D, axis=1, keepdims=True)
-    dD_sum = np.sum(dD, axis=1, keepdims=True)
+    D_2 = D ** 2
+    dD_2 = dD ** 2
+    D_sum = np.sum(D_2, axis=0, keepdims=True)
+    dD_sum = np.sum(dD_2, axis=0, keepdims=True)
 
-    P_x = (D_sum * dD_sum.T) ** 2
-    P_y = (dD_sum * D_sum.T) ** 2
+    P_x = (D_sum.T * dD_sum)
+    P_y = (dD_sum.T * D_sum)
 
     C = C_1 + (C_2 - C_1) * (P_y / (P_x + P_y + 1e-15))
     # C_ = C_1 + (C_2 - C_1) * (1 - 1 / (1 + np.sqrt(P_x / (P_y))))
-    Z = D.T @ ((C_1 + C_2) / 2) @ D
-    zx_bar = D.T @ C @ dD
-    zy_bar = dD.T @ C @ D
+    Z = D.T @ C @ D
+    zx_bar = D.T @ C @ dD.T
+    zy_bar = dD @ C @ D
+
+    Z[Z > 1] = 1
+    Z[Z < -1] = -1
+    zx_bar[zx_bar > 1] = 1
+    zx_bar[zx_bar < -1] = -1
+    zy_bar[zy_bar > 1] = 1
+    zy_bar[zy_bar < -1] = -1
 
     fig = plt.figure()
     ax = Axes3D(fig)
@@ -104,6 +114,12 @@ def rendering(dir):
 
     z_img = np.round((Z - np.min(Z)) / np.max(Z - np.min(Z)) * 255)
     cv2.imwrite("z.jpg", z_img.astype(np.uint8))
+    zx_img = np.round((zx_bar - np.min(zx_bar)) /
+                      np.max(zx_bar - np.min(zx_bar)) * 255)
+    cv2.imwrite("zx.jpg", zx_img.astype(np.uint8))
+    zy_img = np.round((zy_bar - np.min(zy_bar)) /
+                      np.max(zy_bar - np.min(zy_bar)) * 255)
+    cv2.imwrite("zy.jpg", zy_img.astype(np.uint8))
 
     # 进行测试
     img_r = test_s @ B_star

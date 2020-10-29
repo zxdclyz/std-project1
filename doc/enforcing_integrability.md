@@ -131,6 +131,31 @@ $$
 \varPhi_y(x, y; u, v) = -f(u)f(v) \cos{(\frac{\pi u (2 x + 1)}{2N})}\sin{(\frac{\pi v (2 y + 1)}{2N})} \frac{\pi v}{N}
 $$
 
+DCT 的变换矩阵的生成为：
+
+```python
+t = np.arange(N).reshape(1, -1)
+D = np.cos(t.T * (2 * t + 1) * np.pi / (2 * N))
+D[0, :] = np.sqrt(0.5)
+D = D * np.sqrt(2 / N)
+```
+
+$$
+t = [0, 1, 2, \cdots, N - 1]\\
+D = \cos\left(t^T * [2t + 1] * \frac{\pi}{2N}\right)\\
+t^T @ [2t + 1] =
+\begin{bmatrix}
+    0\\1\\\vdots\\N-1
+\end{bmatrix}
+\begin{bmatrix}
+    0&\cdots&2 (N - 1) + 1
+\end{bmatrix}
+$$
+
+$$
+\sum_x\sum_y \varPhi_x^2(x, y; u, v)\\
+$$
+
 考虑一维情况偏导的变换
 
 $$
