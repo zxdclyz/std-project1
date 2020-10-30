@@ -12,14 +12,14 @@ from scipy.linalg import lstsq
 
 def dct(z_x, z_y, N):
     t = np.arange(N).reshape(1, -1)
-    D = np.cos(t.T * (2 * t + 1) * np.pi / (2 * N))
-    D[0, :] = np.sqrt(0.5)
-    D = D * np.sqrt(2 / N)
+    D = np.sqrt(2 / N) * np.cos(t.T * (2 * t + 1) * np.pi / (2 * N))
+    D[0, :] = np.sqrt(1 / N)
 
     dD = - np.sqrt(2 / N) * np.sin(t.T * (2 * t + 1)
                                    * np.pi / (2 * N)) * np.pi / N
     dD[0, :] = np.sqrt(1 / N)
     dD = dD * t.T
+    dD = dD.T
     dD_i = np.linalg.pinv(dD)
 
     C_1 = D @ z_x.reshape([N, N]) @ dD_i.T
@@ -96,30 +96,22 @@ def rendering(dir):
     zx_bar = D.T @ C @ dD.T
     zy_bar = dD @ C @ D
 
-    Z[Z > 1] = 1
-    Z[Z < -1] = -1
-    zx_bar[zx_bar > 1] = 1
-    zx_bar[zx_bar < -1] = -1
-    zy_bar[zy_bar > 1] = 1
-    zy_bar[zy_bar < -1] = -1
-
     fig = plt.figure()
     ax = Axes3D(fig)
     X = np.arange(168)
     Y = np.arange(168)
     X, Y = np.meshgrid(X, Y)
-    ax.set_zlim3d(-1, 1)
     ax.plot_surface(X, Y, Z, cmap="rainbow")
     plt.show()
 
-    z_img = np.round((Z - np.min(Z)) / np.max(Z - np.min(Z)) * 255)
-    cv2.imwrite("z.jpg", z_img.astype(np.uint8))
-    zx_img = np.round((zx_bar - np.min(zx_bar)) /
-                      np.max(zx_bar - np.min(zx_bar)) * 255)
-    cv2.imwrite("zx.jpg", zx_img.astype(np.uint8))
-    zy_img = np.round((zy_bar - np.min(zy_bar)) /
-                      np.max(zy_bar - np.min(zy_bar)) * 255)
-    cv2.imwrite("zy.jpg", zy_img.astype(np.uint8))
+    # z_img = np.round((Z - np.min(Z)) / np.max(Z - np.min(Z)) * 255)
+    # cv2.imwrite("z.jpg", z_img.astype(np.uint8))
+    # zx_img = np.round((zx_bar - np.min(zx_bar)) /
+    #                   np.max(zx_bar - np.min(zx_bar)) * 255)
+    # cv2.imwrite("zx.jpg", zx_img.astype(np.uint8))
+    # zy_img = np.round((zy_bar - np.min(zy_bar)) /
+    #                   np.max(zy_bar - np.min(zy_bar)) * 255)
+    # cv2.imwrite("zy.jpg", zy_img.astype(np.uint8))
 
     # 进行测试
     img_r = test_s @ B_star
