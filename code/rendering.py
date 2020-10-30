@@ -1,13 +1,11 @@
 import numpy as np
 import os
 import cv2
-import scipy
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-from numpy.core.fromnumeric import reshape
 from utils import sph2cart
-from scipy.optimize import curve_fit
 from scipy.linalg import lstsq
+from numpy.linalg import pinv
 
 
 def dct(z_x, z_y, N):
@@ -20,11 +18,21 @@ def dct(z_x, z_y, N):
     dD[0, :] = np.sqrt(1 / N)
     dD = dD * t.T
     dD = dD.T
-    dD_i = np.linalg.pinv(dD)
+    dD_i = pinv(dD)
 
     C_1 = D @ z_x.reshape([N, N]) @ dD_i.T
     C_2 = dD_i @ z_y.reshape([N, N]) @ D.T
     return [C_1, C_2, D, dD, dD_i]
+
+def estimateAlbedo(B,Z):
+    # input should both be (3,n)
+    n = B.shape[1]
+    kd = np.zeros([n, 1])
+    for i in range(n):
+        kd[i] = B[:,i,np.newaxis].T @ pinv(Z[:,i,np.newaxis]).T
+
+    return kd.T
+
 
 
 # def dist(C, C_1, C_2, P_x, P_y):
@@ -93,8 +101,14 @@ def rendering(dir):
     C = C_1 + (C_2 - C_1) * (P_y / (P_x + P_y + 1e-15))
     # C_ = C_1 + (C_2 - C_1) * (1 - 1 / (1 + np.sqrt(P_x / (P_y))))
     Z = D.T @ C @ D
-    zx_bar = D.T @ C @ dD.T
-    zy_bar = dD @ C @ D
+    zx_bar = (D.T @ C @ dD.T).reshape([1,-1])
+    zy_bar = (dD @ C @ D).reshape([1,-1])
+
+    zxy_bar = np.concatenate([zx_bar, zy_bar, -np.ones_like(zx_bar)])
+    zxy_bar = zxy_bar/np.sqrt(1+zx_bar**2+zy_bar**2)
+
+    kd_new = estimateAlbedo(B_star, zxy_bar)
+    B_bar = kd_new*zxy_bar
 
     fig = plt.figure()
     ax = Axes3D(fig)
@@ -114,7 +128,9 @@ def rendering(dir):
     # cv2.imwrite("zy.jpg", zy_img.astype(np.uint8))
 
     # 进行测试
-    img_r = test_s @ B_star
+    img_r = test_s @ B_bar
+    img_r[img_r<0] = 0
+    img_r[img_r>255] = 255
 
     # 生成测试图像
     imgs = []
