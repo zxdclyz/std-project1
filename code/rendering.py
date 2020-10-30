@@ -80,7 +80,12 @@ def rendering(dir):
     for i in range(0, len(train_images)):
         train_data[i, :] = train_images[i]
 
+    
     kd = np.mean(train_data, axis=0, keepdims=True)
+    train_data[train_data>250] = 250
+    for i in range(train_data.shape[0]):
+        tmp = train_data[None,i,:]
+        train_data[None,i,:][tmp/kd<0.1] = kd[tmp/kd<0.1]*0.1
 
     # 使用最小二乘法计算B
     B_star, _, _, _ = lstsq(train_s, train_data)
@@ -110,13 +115,13 @@ def rendering(dir):
     kd_new = estimateAlbedo(B_star, zxy_bar)
     B_bar = kd_new*zxy_bar
 
-    fig = plt.figure()
-    ax = Axes3D(fig)
-    X = np.arange(168)
-    Y = np.arange(168)
-    X, Y = np.meshgrid(X, Y)
-    ax.plot_surface(X, Y, Z, cmap="rainbow")
-    plt.show()
+    # fig = plt.figure()
+    # ax = Axes3D(fig)
+    # X = np.arange(168)
+    # Y = np.arange(168)
+    # X, Y = np.meshgrid(X, Y)
+    # ax.plot_surface(X, Y, Z, cmap="rainbow")
+    # plt.show()
 
     # z_img = np.round((Z - np.min(Z)) / np.max(Z - np.min(Z)) * 255)
     # cv2.imwrite("z.jpg", z_img.astype(np.uint8))
@@ -129,8 +134,13 @@ def rendering(dir):
 
     # 进行测试
     img_r = test_s @ B_bar
-    img_r[img_r<0] = 0
-    img_r[img_r>255] = 255
+    # 直接线性调整到0-255
+    # img_r = img_r - np.min(img_r,axis=1,keepdims=True)
+    # img_r = img_r/np.max(img_r,axis=1,keepdims=True)*255
+    
+    # 阈值法调整到0-255
+    # img_r[img_r<0] = 0
+    # img_r[img_r>255] = 255
 
     # 生成测试图像
     imgs = []
