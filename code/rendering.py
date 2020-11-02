@@ -9,12 +9,27 @@ from numpy.linalg import pinv
 
 
 def dct(z_x, z_y, N):
+    '''
+    DCT变换
+
+    Args:
+        z_x (ndarray): 深度z的x方向偏导
+        z_y (ndarray): 深度z的y方向偏导
+        N (int): 图片的宽度(图片大小是N*N)
+
+    Returns:
+        list: 包含：
+                C_1: 深度z的x方向偏导DCT变换的系数矩阵
+                C_2: 深度z的y方向偏导DCT变换的系数矩阵
+                D: DCT变换的基函数矩阵
+                dD: D求导之后的结果
+    '''
     t = np.arange(N).reshape(1, -1)
     D = np.sqrt(2 / N) * np.cos(t.T * (2 * t + 1) * np.pi / (2 * N))
     D[0, :] = np.sqrt(1 / N)
 
-    dD = - np.sqrt(2 / N) * np.sin(t.T * (2 * t + 1)
-                                   * np.pi / (2 * N)) * np.pi / N
+    dD = -np.sqrt(2 / N) * np.sin(t.T * (2 * t + 1) * np.pi /
+                                  (2 * N)) * np.pi / N
     dD[0, :] = np.sqrt(1 / N)
     dD = dD * t.T
     dD = dD.T
@@ -22,22 +37,27 @@ def dct(z_x, z_y, N):
 
     C_1 = D @ z_x.reshape([N, N]) @ dD_i.T
     C_2 = dD_i @ z_y.reshape([N, N]) @ D.T
-    return [C_1, C_2, D, dD, dD_i]
+    return [C_1, C_2, D, dD]
 
-def estimateAlbedo(B,Z):
+
+def estimateAlbedo(B, z):
+    '''
+    计算反射系数kd
+
+    Args:
+        B (ndarray): B的估计值B_star
+        z (ndarray): 深度
+
+    Returns:
+        ndarray: 反射系数kd
+    '''
     # input should both be (3,n)
     n = B.shape[1]
     kd = np.zeros([n, 1])
     for i in range(n):
-        kd[i] = B[:,i,np.newaxis].T @ pinv(Z[:,i,np.newaxis]).T
+        kd[i] = B[:, i, np.newaxis].T @ pinv(z[:, i, np.newaxis]).T
 
     return kd.T
-
-
-
-# def dist(C, C_1, C_2, P_x, P_y):
-#     C_r = C.reshape(list(C_1.shape))
-#     return np.sum((C_r - C_1) ** 2 * P_x + (C_r - C_2) ** 2 * P_y)
 
 
 def rendering(dir):
@@ -45,14 +65,14 @@ def rendering(dir):
     # imgs为渲染结果，大小等同于测试图像大小，位置与测试图像像素点一一对应
 
     # 读取train.txt
-    train_data = []
+    train_data_path = []
     with open(os.path.join(dir, 'train.txt'), 'r') as f:
         for line in f.readlines():
-            train_data.append(line.strip('\n').split(','))
+            train_data_path.append(line.strip('\n').split(','))
 
     # train_data转化为直角坐标
     train_s = []
-    for data in train_data:
+    for data in train_data_path:
         train_s.append(sph2cart(int(data[1]), int(data[2]), 1))
     train_s = np.array(train_s)
 
@@ -70,91 +90,79 @@ def rendering(dir):
 
     # 读取训练集图片
     train_images = []
-    for i in range(len(train_data)):
-        train_img = cv2.imread(os.path.join(
-            dir, 'train', train_data[i][0] + '.bmp'), 0)
+    for i in range(len(train_data_path)):
+        train_img = cv2.imread(
+            os.path.join(dir, 'train', train_data_path[i][0] + '.bmp'), 0)
         train_img = train_img.flatten()
         train_images.append(train_img)
-
     train_data = np.zeros([len(train_images), len(train_images[0])])
     for i in range(0, len(train_images)):
         train_data[i, :] = train_images[i]
 
-    
+    # 数据预处理
     kd = np.mean(train_data, axis=0, keepdims=True)
-    train_data[train_data>250] = 250
+    train_data[train_data > 250] = 250
     for i in range(train_data.shape[0]):
-        tmp = train_data[None,i,:]
-        train_data[None,i,:][tmp/kd<0.1] = kd[tmp/kd<0.1]*0.1
+        tmp = train_data[None, i, :]
+        train_data[None, i, :][tmp / kd < 0.1] = kd[tmp / kd < 0.1] * 0.1
 
     # 使用最小二乘法计算B
     B_star, _, _, _ = lstsq(train_s, train_data)
 
-    t = B_star/kd
-    [zx_star, zy_star, _] = -t/t[2, :]
+    # 计算zx_star, zy_star
+    [zx_star, zy_star, _] = -B_star / B_star[2, :]
 
-    [C_1, C_2, D, dD, dD_i] = dct(zx_star, zy_star, 168)
+    [C_1, C_2, D, dD] = dct(zx_star, zy_star, 168)
 
-    D_2 = D ** 2
-    dD_2 = dD ** 2
+    # 求P_x, P_y
+    D_2 = D**2
+    dD_2 = dD**2
     D_sum = np.sum(D_2, axis=0, keepdims=True)
     dD_sum = np.sum(dD_2, axis=0, keepdims=True)
-
     P_x = (D_sum.T * dD_sum)
     P_y = (dD_sum.T * D_sum)
 
-    C = C_1 + (C_2 - C_1) * (P_y / (P_x + P_y + 1e-15))
-    # C_ = C_1 + (C_2 - C_1) * (1 - 1 / (1 + np.sqrt(P_x / (P_y))))
-    Z = D.T @ C @ D
-    zx_bar = (D.T @ C @ dD.T).reshape([1,-1])
-    zy_bar = (dD @ C @ D).reshape([1,-1])
+    # 根据C_1, C_2优化得到系数矩阵C, 并以此求z, zx_bar, zy_bar
+    C = (C_1 * P_x + C_2 * P_y) / (P_x + P_y + 1e-15)
+    z = D.T @ C @ D
+    zx_bar = (D.T @ C @ dD.T).reshape([1, -1])
+    zy_bar = (dD @ C @ D).reshape([1, -1])
 
     zxy_bar = np.concatenate([zx_bar, zy_bar, -np.ones_like(zx_bar)])
-    zxy_bar = zxy_bar/np.sqrt(1+zx_bar**2+zy_bar**2)
+    zxy_bar = zxy_bar / np.sqrt(1 + zx_bar**2 + zy_bar**2)
 
+    # 计算最终的kd并以此计算B
     kd_new = estimateAlbedo(B_star, zxy_bar)
-    B_bar = kd_new*zxy_bar
+    B_bar = kd_new * zxy_bar
 
+    # 绘制人脸深度彩虹图
     # fig = plt.figure()
     # ax = Axes3D(fig)
     # X = np.arange(168)
     # Y = np.arange(168)
     # X, Y = np.meshgrid(X, Y)
-    # ax.plot_surface(X, Y, Z, cmap="rainbow")
+    # ax.plot_surface(X, Y, z, cmap="rainbow")
     # plt.show()
-
-    # z_img = np.round((Z - np.min(Z)) / np.max(Z - np.min(Z)) * 255)
-    # cv2.imwrite("z.jpg", z_img.astype(np.uint8))
-    # zx_img = np.round((zx_bar - np.min(zx_bar)) /
-    #                   np.max(zx_bar - np.min(zx_bar)) * 255)
-    # cv2.imwrite("zx.jpg", zx_img.astype(np.uint8))
-    # zy_img = np.round((zy_bar - np.min(zy_bar)) /
-    #                   np.max(zy_bar - np.min(zy_bar)) * 255)
-    # cv2.imwrite("zy.jpg", zy_img.astype(np.uint8))
 
     # 进行测试
     img_r = test_s @ B_bar
-    # 直接线性调整到0-255
-    # img_r = img_r - np.min(img_r,axis=1,keepdims=True)
-    # img_r = img_r/np.max(img_r,axis=1,keepdims=True)*255
-    
+
+    # 分布平移
+    # for i in range(len(img_r)):
+    #     drop_num = round(img_r.shape[1] * 0.01)
+    #     img_max = np.min(heapq.nlargest(drop_num, img_r[i]))
+    #     img_min = np.max(heapq.nsmallest(drop_num, img_r[i]))
+    #     if img_max > 255 or img_min < -5:
+    #         move = 127.5 - (img_max + img_min) / 2
+    #         img_r[i] = img_r[i] + move
+
     # 阈值法调整到0-255
-    # img_r[img_r<0] = 0
-    # img_r[img_r>255] = 255
+    img_r[img_r < 0] = 0
+    img_r[img_r > 255] = 255
 
     # 生成测试图像
     imgs = []
     for img in img_r:
         imgs.append(np.reshape(img, [168, 168]).astype(np.uint8))
 
-    z = np.zeros([168, 168])
-
-    return Z, imgs
-
-
-def main():
-    pass
-
-
-if __name__ == "__main__":
-    main()
+    return z, imgs
