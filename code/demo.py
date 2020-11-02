@@ -3,7 +3,7 @@ import numpy as np
 import os
 from rendering import rendering
 
-dirname = 'dataset\dataset_offline'
+dirname = os.path.join('dataset', 'dataset_offline')
 dirs = os.listdir(dirname)
 for dir in dirs:
     if dir[0] == 'P':
