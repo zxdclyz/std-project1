@@ -1,0 +1,26 @@
+name: Format with yapf
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  yapf-formater:
+    defaults:
+      run:
+        shell: bash
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python 3.6
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.6'
+        architecture: 'x64'
+    - name: Display Python version
+      run: python -c "import sys; print(sys.version)"
+    - name: Install dependencies
+      run: |
+        cd code && python setup.py
+    - name: test
+      run: python code/demo.py
