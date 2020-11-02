@@ -2,7 +2,7 @@ name: test python
 on:
   push:
     branches:
-      - master
+      - main
 
 jobs:
   test_py:
