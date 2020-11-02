@@ -1,11 +1,11 @@
-name: Format with yapf
+name: test python
 on:
   push:
     branches:
       - master
 
 jobs:
-  yapf-formater:
+  test_py:
     defaults:
       run:
         shell: bash
