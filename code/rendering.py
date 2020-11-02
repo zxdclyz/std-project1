@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from utils import sph2cart
 from scipy.linalg import lstsq
-from numpy.linalg import pinv
+from numpy.linalg import pinv, norm
 
 
 def dct(z_x, z_y, N):
@@ -55,7 +55,7 @@ def estimateAlbedo(B, z):
     n = B.shape[1]
     kd = np.zeros([n, 1])
     for i in range(n):
-        kd[i] = B[:, i, np.newaxis].T @ pinv(z[:, i, np.newaxis]).T
+        kd[i] = B[:, i] @ z[:, i] / norm(z[:, i])
 
     return kd.T
 
@@ -146,6 +146,8 @@ def rendering(dir):
 
     # 进行测试
     img_r = test_s @ B_bar
+    # Half Lambert
+    # img_r = kd_new * (test_s @ zxy_bar * 0.5 - 0.5)
 
     # 分布平移
     # for i in range(len(img_r)):
