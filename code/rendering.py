@@ -141,7 +141,7 @@ def rendering(dir):
     # X = np.arange(168)
     # Y = np.arange(168)
     # X, Y = np.meshgrid(X, Y)
-    # ax.plot_surface(X, Y, z, cmap="rainbow")
+    # ax.plot_surface(X, Y, z, rstride = 1, cstride = 1, cmap="rainbow")
     # plt.show()
 
     # 进行测试
