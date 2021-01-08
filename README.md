@@ -5,6 +5,7 @@
 ## 方法参考
 
 主要需要阅读论文的 2.1, 2.2 节
+
 论文中给出的方法总结如下：
 
 1. Find the average of the training images and use it as an initial estimate of the albedo, $\alpha(x,y)$.
@@ -18,3 +19,20 @@
 9. Update each of the light source directions and strengths si independently using least-squares minimization and the newly constructed $\bar{B}$.
 10. Repeat Steps 4 through 9 until the estimates converge.
 11. Perform inverse DCT on the coefficients $\bar{c}(\bold{w})$ to get the GBR surface $\bar{z}(x,y)$.
+
+## 维护者
+
+[@zxdclyz](https://github.com/zxdclyz)
+
+[@duskmoon314](https://github.com/duskmoon314)
+
+[@BobAnkh](https://github.com/BobAnkh)
+
+## 关联项目
+
+[视听导第一次大作业](https://github.com/zxdclyz/std-project1)
+
+[视听导第二次大作业](https://github.com/duskmoon314/std-project2)
+
+[视听导第三次大作业](https://github.com/BobAnkh/std-project3)
+
